@@ -196,6 +196,8 @@ class Fraction(object):
         self.den = Polynomial([(x[0]*1.0/gcd , x[1]) for x in self.den.terms])
         return self
 
+    def __repr__(self):
+        return str(self)
 
     def __str__(self):
         if str(self.den) == "1.0" or str(self.den) == "1":
@@ -203,8 +205,20 @@ class Fraction(object):
         return "(" + str(self.num) + ")/(" + str(self.den) + ")"
 
 
-def L_Interpolate(points):
-    """takes in a list of tuples of x,y cordinates"""
+def L_Interpolate(*points):
+    """takes in a list of tuples of x,y cordinates
+
+    >>> L_Interpolate((-1, 1), (0, 0), (1, 1))
+    x^2
+    >>> interpolate = lambda y, d: L_Interpolate(*[
+    ... (x, y(x)) for x in range(d+1)])
+    >>> y2 = lambda x: x**5 + 3*x**3 + x
+    >>> interpolate(y2, 5)
+    x^5 + 3.0x^3 + x^1
+    >>> y3 = lambda x: 7*x**4 + 5*x**3 + 9*x**2 + 3
+    >>> interpolate(y3, 4)
+    7.0x^4 + 5.0x^3 + 9.0x^2 + 3.0
+    """
     poly = Polynomial
     poly_builder = []
 
@@ -226,5 +240,3 @@ def L_Interpolate(points):
     for polynomial in poly_builder:
         final_polynomial = Fraction.add(final_polynomial, polynomial)
     return final_polynomial
-
-print(L_Interpolate([(-1,1),(0,0),(1,1)]))
