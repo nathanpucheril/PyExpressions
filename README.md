@@ -7,3 +7,5 @@ In case the installation script fails, you may execute the contents of the bash 
 1. Setup a new virtual environment: `python3 -m virtualenv env`.
 1. Start the virtual environment: `source env/bin/activate`.
 1. Install all requirements `pip install -r requirements.txt`.
+
+> To activate the virtual environment for the future, use `source activate.sh`.
