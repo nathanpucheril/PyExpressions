@@ -1,10 +1,3 @@
-*.org
-*.pyc
-*.json
-*.csv
-venv/
-*results.json
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
