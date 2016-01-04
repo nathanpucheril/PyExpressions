@@ -12,7 +12,7 @@ isNumeric = lambda n: isinstance(n, (Fraction, numbers.Number))
 poly = lambda p: P.make_constant(p) if isNumeric(p) else p
 
 # converts to int if float value is equal to int value
-possibleInt = lambda n: int(n) if int(n) == float(n) else n
+pint = lambda n: int(n) if int(n) == float(n) else n
 
 class Polynomial(object):
 
@@ -118,12 +118,23 @@ class Polynomial(object):
             for p2 in poly(p2).terms], []))
 
     def __div__(p1, p2):
+        """Implements division for Polynomial object"""
         raise NotImplemented()
 
     def __float__(p1):
+        """Implements coercion to floating point for Polynomial objects"""
         if Polynomial.is_constant(p1):
             return float(p1.terms[0][0])
         raise TypeError('Non-constant polynomial cannot be coerced to float.')
+
+    def __getitem__(self, i):
+        """Implements indexing for Polynomial objects
+
+        >>> P((1, 0), (5, 3), (3, 2))[0]
+        5x^3
+        """
+        self.sort()
+        return Polynomial(self.terms[i])
 
     def __repr__(self):
         return str(self)
@@ -148,7 +159,7 @@ class Polynomial(object):
                 0: '',
                 1: self.var
             }.get(exponent, '%s^%d' % (self.var, exponent))
-            cof = '' if coefficient == 1 else str(possibleInt(coefficient))
+            cof = '' if coefficient == 1 else str(pint(coefficient))
             return '%s%s' % (cof, exp)
         string = ''
         for t in map(stringify, filter(lambda t: t[0], self.terms)):
@@ -166,13 +177,14 @@ class Fraction(object):
     in Python.
     """
 
-    def __init__(self, num, den):
+    def __init__(self, num, den, sigfigs=2):
         assert den != 0
         assert isNumeric(num) or isinstance(num, Polynomial)
         assert isNumeric(den) or isinstance(den, Polynomial)
 #CHECK FOR SIMPLIFIYING FRACTIONS
         self.num = poly(num)
         self.den = poly(den)
+        self.sigfigs = sigfigs
         self.reduceConstants()
         self.simplify()
 
@@ -180,18 +192,21 @@ class Fraction(object):
         return Fraction(self.num, self.den)
 
     def __add__(f1, f2):
+        """Implements addition for Fraction object"""
         assert isNumeric(f1) and isNumeric(f2)
         if not isinstance(f2, Fraction):
             return Fraction(f1.num * f2, f1.den)
         return Fraction(f1.num * f2.den + f2.num * f1.den, f1.den * f2.den)
 
     def __mul__(f1, f2):
+        """Implements multiplication for Fraction object"""
         assert isNumeric(f1) and isNumeric(f2)
         if not isinstance(f2, Fraction):
             return Fraction(f1.num * f2, f1.den)
         return Fraction(f1.num * f2.num, f1.den * f2.den)
 
     def __div__(f1,f2):
+        """Implements division for Fraction object"""
         assert isNumeric(f1) and isNumeric(f2)
         return f1 * f2.copy().invert()
 
@@ -213,7 +228,7 @@ class Fraction(object):
             if y == 0:
                 return x
             return gcd_help(y, x % y)
-        gcd = reduce(gcd_help, constants)
+        gcd = int(reduce(gcd_help, constants)) or 1
         self.num = Polynomial([(x[0]*1.0/gcd , x[1]) for x in self.num.terms])
         self.den = Polynomial([(x[0]*1.0/gcd , x[1]) for x in self.den.terms])
         return self
@@ -230,10 +245,28 @@ class Fraction(object):
         return str(self)
 
     def __str__(self):
-        """String representation of a Fraction"""
-        if poly(self.den).is_constant() and float(self.den) == 1:
-            return str(self.num)
-        return "(%s)/(%s)" % (str(self.num), str(self.den))
+        """String representation of a Fraction
+
+        >>> Fraction(1, 3)
+        1/3
+        >>> Fraction(1.4, 2)
+        1.4/2
+        >>> Fraction(poly(1), poly(3))
+        1/3
+        >>> Fraction(P((5, 3)), 3)
+        5x^3/3
+        """
+        num, den = self.num, self.den
+        pnum, pden = poly(num), poly(den)
+        num_is_single, num_is_constant = len(pnum.terms) == 1,pnum.is_constant()
+        den_is_single, den_is_constant = len(pden.terms) == 1,pden.is_constant()
+        if den_is_constant and float(den) == 1:
+            return str(num)
+        if num_is_single and den_is_single:
+            num = pint(float(num)) if num_is_constant else num[0]
+            den = pint(float(den)) if den_is_constant else den[0]
+            return "%s/%s" % (str(num), str(den))
+        return "(%s)/(%s)" % (str(num), str(den))
 
 
 def interpolate(*points):
@@ -248,7 +281,8 @@ def interpolate(*points):
     points = set(points)
     return reduce(add, [
         Fraction(
-            prod(P((1, 1), (-x2, 0)) for x2, y2 in points if (x,y) != (x2,y2)), prod(P((x,0), (-x2, 0)) for x2, y2 in points if (x,y) != (x2,y2))
+            prod(P((1, 1), (-x2, 0)) for x2, y2 in points if (x,y) != (x2,y2)),
+            prod(P((x,0), (-x2, 0)) for x2, y2 in points if (x,y) != (x2,y2))
         ) * y for x, y in points])
 
 # abbreviations
