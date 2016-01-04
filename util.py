@@ -22,24 +22,47 @@ class Polynomial(object):
         Polynomial can be called with a single list of multiple points, or
         with multiple arguments, where each argument is a point.
 
-        >>> Polynomial((3, 2), (2, 0))
+        >>> P((3, 2), (2, 0))
         3x^2 + 2
-        >>> Polynomial([(3, 2), (2, 0)])
+        >>> P([(3, 2), (2, 0)])
         3x^2 + 2
-        >>> Polynomial([])
-        Traceback (most recent call last):
-        ...
-        AssertionError: No terms provided.
+        >>> P('3x^2 + 2')
+        3x^2 + 2
         """
         assert len(terms) or len(_terms), 'No terms provided.'
-        assert all([isinstance(t, tuple) and len(t) == 2 for t in _terms]), \
-            "Terms must be tuples of the form (coefficient, exponent)."
         assert isinstance(var, str), "Variable must be a string."
+        if isinstance(terms, str):
+            terms = Polynomial.parse_terms(terms, var)
         __terms = terms if hasattr(terms[0], '__iter__') else (terms,) + _terms
+        assert all([isinstance(t, tuple) and len(t) == 2 for t in __terms]), \
+            "Terms must be tuples of the form (coefficient, exponent)."
         self.termsList = self.unsimplified_terms = __terms
         self.combine_terms()
         self.sort()
         self.var = var
+
+    @staticmethod
+    def parse_terms(string, var='x'):
+        """Converts string of terms into list of (coefficient, exponent) tuples.
+
+        >>> P.parse_terms('x^3 + 3x^2 + 3x + 2')
+        [(1, 3), (3, 2), (3, 1), (2, 0)]
+        """
+        terms = []
+        for term in filter(lambda x: x not in ('-', '+'), string.split(' ')):
+            if var not in term:
+                terms.append((term, 0))
+            elif var == term:
+                terms.append((1, 1))
+            elif '^' not in term:
+                term = term.split('x')
+                terms.append((term[0], 1))
+            elif term[0] == var:
+                terms.append((1, term[2:]))
+            else:
+                terms.append(term.split('%s^' % var))
+        coerce = lambda n: pint(float(n))
+        return [(coerce(coeff), coerce(exp)) for coeff, exp in terms]
 
     @property
     def terms(self):
@@ -65,8 +88,8 @@ class Polynomial(object):
     def combine_terms(self):
         """Combine terms, by summing all coefficients of the same degree
 
-        >>> P((3, 3), (3, 5), (2, 5)).combine_terms().termsList
-        [(3, 3), (5, 5)]
+        >>> P('3x^3 + 3x^5 + 2x^5').combine_terms()
+        3x^3 + 5x^5
         """
         combined = {}
         for coeff, exp in self.terms:
@@ -77,8 +100,8 @@ class Polynomial(object):
     def clean(self):
         """Removes all terms with coefficient 0
 
-        >>> P((3, 5), (0, 5), (3, 1)).clean().termsList
-        [(3, 5), (3, 1)]
+        >>> P('3x^5 + 0x^4 + 3x').clean()
+        3x^5 + 3x
         """
         self.termsList = list(filter(lambda term: term[0], self.termsList))
         return self
@@ -96,9 +119,9 @@ class Polynomial(object):
     def __sub__(p1, p2):
         """Implements subtraction for Polynomial object
 
-        >>> P((1, 0)) - P((2, 1), (2, 0))
+        >>> P('1') - P('2x + 2')
         -2x - 1
-        >>> P((3, 0), (4, 3)) - 4
+        >>> P('3 + 4x^3') - 4
         4x^3 - 1
         """
         return p1 + -p2
@@ -106,7 +129,7 @@ class Polynomial(object):
     def __neg__(p):
         """Implements negation for Polynomial object
 
-        >>> -P((1, 4))
+        >>> -P('x^4')
         -1x^4
         """
         return p * -1
@@ -116,14 +139,26 @@ class Polynomial(object):
         by non-Polynomial objects, like integers or floats, can only be
         accomplished in one format: Polynomial * non-Polynomial
 
-        >>> P((1, 0)) * -5
+        >>> P('1') * -5
         -5
-        >>> P((1, 1), (3, 2)) * P((3, 2), (1, 3)) # (3x^2 + x) * (x^3 + 3x^2)
+        >>> P('3x^2 + x') * P('x^3 + 3x^2')
         3x^5 + 10x^4 + 3x^3
         """
         multiply = lambda p1, p2: (p1[0] * p2[0], p1[1] + p2[1])
         return Polynomial(sum([[multiply(p1, p2) for p1 in poly(p1).terms]
             for p2 in poly(p2).terms], []))
+
+    def __xor__(self, n):
+        """Implements xor as exponentiation
+
+        >>> x = P('x^0')
+        >>> (x^4)*3
+        3x^4
+        >>> p = (x^5)*3 + x*2 + 3
+        >>> p(1)
+        8
+        """
+        return Polynomial([(c, e+n) for c, e in self.terms])
 
     def __div__(p1, p2):
         """Implements division for Polynomial object"""
@@ -135,31 +170,21 @@ class Polynomial(object):
             return float(p1.terms[0][0])
         raise TypeError('Non-constant polynomial cannot be coerced to float.')
 
-    def __getitem__(self, i):
-        """Implements indexing for Polynomial objects
-
-        >>> p = P((1, 0), (5, 3), (3, 2))
-        >>> p[0]  # first term, after sorted by degree
-        5x^3
-        """
-        self.sort()
-        return Polynomial(self.terms[i])
-
     def __repr__(self):
         return str(self)
 
     def __str__(self):
         """Stringifies polynomials
 
-        >>> P((3, 2))
+        >>> P('3x^2')
         3x^2
-        >>> P((3, 1)) # no caret (^), if exponent is 1
+        >>> P('3x') # no caret (^), if exponent is 1
         3x
-        >>> P((3, 0)) # no variable if exponent is 0
+        >>> P('3') # no variable if exponent is 0
         3
-        >>> P((1, 1)) # no coefficient if coefficient is 1
+        >>> P('x') # no coefficient if coefficient is 1
         x
-        >>> P((0, 2), (1, 1)) # no terms with coefficient 0
+        >>> P('0x^2 + x') # no terms with coefficient 0
         x
         """
         def stringify(term):
@@ -179,6 +204,41 @@ class Polynomial(object):
             else:
                 string += ' + %s' % t
         return string
+
+    #################
+    # FUNCTIONALITY #
+    #################
+
+    def asFunction(self):
+        """Returns lambda function representing this polynomial.
+
+        >>> p = P('x^2 + 3x^6 + 2x + 3').asFunction()
+        >>> p(0)
+        3
+        >>> p(1)
+        9
+        """
+        return lambda x: sum([cof*(x**exp) for cof, exp in self.terms])
+
+    def __call__(self, x):
+        """Implements evaluation for Polynomial objects.
+
+        >>> p = P('x^2 + 3x^6 + 2x + 3')
+        >>> p(0)
+        3
+        >>> p(1)
+        9
+        """
+        return self.asFunction()(x)
+
+    def __getitem__(self, i):
+        """Implements indexing for Polynomial objects, returning by degree.
+
+        >>> p = P('1 + 5x^3 + 3x^2')
+        >>> p[2]  # return term with degree 2
+        3x^2
+        """
+        return P([(c, e) for c, e in self.terms if e == i])
 
 
 class Fraction(object):
@@ -257,13 +317,13 @@ class Fraction(object):
     def __str__(self):
         """String representation of a Fraction
 
-        >>> Fraction(1, 3)
+        >>> F(1, 3)
         1/3
-        >>> Fraction(1.4, 2)
+        >>> F(1.4, 2)
         1.4/2
-        >>> Fraction(poly(1), poly(3))
+        >>> F(poly(1), poly(3))
         1/3
-        >>> Fraction(P((5, 3)), 3)
+        >>> F(P('5x^3'), 3)
         5x^3/3
         """
         num, den = self.num, self.den
@@ -273,27 +333,12 @@ class Fraction(object):
         if den_is_constant and float(den) == 1:
             return str(num)
         if num_is_single and den_is_single:
-            num = pint(float(num)) if num_is_constant else num[0]
-            den = pint(float(den)) if den_is_constant else den[0]
+            num = pint(float(num)) if num_is_constant else P(num.terms[0])
+            den = pint(float(den)) if den_is_constant else P(den.terms[0])
             return "%s/%s" % (str(num), str(den))
         return "(%s)/(%s)" % (str(num), str(den))
 
 
-def interpolate(*points):
-    """Takes in a list of tuples of x,y cordinates.
-
-    >>> ipt = lambda y, d: interpolate(*[(x, y(x)) for x in range(d+1)])
-    >>> ipt(lambda x: x**5 + 3*x**3 + x, 5)
-    x^5 + 3x^3 + x
-    >>> ipt(lambda x: 7*x**4 + 5*x**3 + 9*x**2 + 3, 4)
-    7x^4 + 5x^3 + 9x^2 + 3
-    """
-    points = set(points)
-    return reduce(add, [
-        Fraction(
-            prod(P((1, 1), (-x2, 0)) for x2, y2 in points if (x,y) != (x2,y2)),
-            prod(P((x,0), (-x2, 0)) for x2, y2 in points if (x,y) != (x2,y2))
-        ) * y for x, y in points])
-
 # abbreviations
 P = Polynomial
+F = Fraction
