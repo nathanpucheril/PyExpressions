@@ -1,4 +1,4 @@
-# PyMathematics Library
+# PyExpressions Library
 
 by Alvin Wan and Nathan Pucheril
 
@@ -9,7 +9,7 @@ TODO
 ## Installation
 
 ```
-pip install pymathematics
+pip install pyexpressions
 ```
 
 ## About
