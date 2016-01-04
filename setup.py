@@ -1,7 +1,7 @@
 import os
 from setuptools import setup
 
-VERSION = 'v0.0.0.1'
+VERSION = 'v0.0.0.1dev'
 
 def read(fname):
     return open(os.path.join(os.getcwd(), fname)).read()

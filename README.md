@@ -38,12 +38,24 @@ Polynomials accept human-readable input and evaluate to human-readable output.
 3x^6 + 2x^2 + x + 1
 ```
 
-In addition, this `Polynomial` class supports standard mathematical operations.
+In addition, this `Polynomial` class supports standard mathematical operations,
+that can be mixed with other numerical types.
 
 ```
 >>> p, q, r = P('1'), P('2x + 3'), ('3x^4 + 2x^2 + 1')
 >>> p + q
 2x + 4
->>> p - q
--2x - 2
+>>> r * 4
+12x^4 + 8x^2 + 4
+```
+
+The polynomial can then be evaluated at various points, as you would expect a
+`Polynomial` to do.
+
+```
+>>> x2 = P('x^2')
+>>> x2(-1)
+1
+>>> x2(3)
+9
 ```
