@@ -1,0 +1,2 @@
+# PyMathematics
+discrete mathematics library
