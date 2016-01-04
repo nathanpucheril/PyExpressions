@@ -113,9 +113,10 @@ class Polynomial(object):
     def __add__(p1, p2):
         """Implements addition for Polynomial object
 
-        >>> P('1') + P('2x + 2')
+        >>> p, q, r = P('1'), P('2x + 2'), P('3 + 4x^3')
+        >>> p + q
         2x + 3
-        >>> P('3 + 4x^3') + 4
+        >>> r + 4
         4x^3 + 7
         """
         return Polynomial(poly(p1).terms + poly(p2).terms)
@@ -123,9 +124,10 @@ class Polynomial(object):
     def __sub__(p1, p2):
         """Implements subtraction for Polynomial object
 
-        >>> P('1') - P('2x + 2')
+        >>> p, q, r = P('1'), P('2x + 2'), P('3 + 4x^3')
+        >>> p - q
         -2x - 1
-        >>> P('3 + 4x^3') - 4
+        >>> r - 4
         4x^3 - 1
         """
         return p1 + -p2
@@ -133,7 +135,8 @@ class Polynomial(object):
     def __neg__(p):
         """Implements negation for Polynomial object
 
-        >>> -P('x^4')
+        >>> p = P('x^4')
+        >>> -p
         -1x^4
         """
         return p * -1
@@ -143,9 +146,10 @@ class Polynomial(object):
         by non-Polynomial objects, like integers or floats, can only be
         accomplished in one format: Polynomial * non-Polynomial
 
-        >>> P('1') * -5
+        >>> p, q, r = P('1'), P('3x^2 + x'), P('x^3 + 3x^2')
+        >>> p * -5
         -5
-        >>> P('3x^2 + x') * P('x^3 + 3x^2')
+        >>> q * r
         3x^5 + 10x^4 + 3x^3
         """
         multiply = lambda p1, p2: (p1[0] * p2[0], p1[1] + p2[1])
