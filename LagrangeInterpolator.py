@@ -14,6 +14,7 @@ poly = lambda p: P.make_constant(p) if isNumeric(p) else p
 # converts to int if float value is equal to int value
 pint = lambda n: int(n) if int(n) == float(n) else n
 
+
 class Polynomial(object):
 
     def __init__(self, terms=[], *_terms, var = "x"):
@@ -21,14 +22,14 @@ class Polynomial(object):
         Polynomial can be called with a single list of multiple points, or
         with multiple arguments, where each argument is a point.
 
-        >>> Polynomial([])
-        Traceback (most recent call last):
-        ...
-        AssertionError: No terms provided.
         >>> Polynomial((3, 2), (2, 0))
         3x^2 + 2
         >>> Polynomial([(3, 2), (2, 0)])
         3x^2 + 2
+        >>> Polynomial([])
+        Traceback (most recent call last):
+        ...
+        AssertionError: No terms provided.
         """
         assert len(terms) or len(_terms), 'No terms provided.'
         assert all([isinstance(t, tuple) and len(t) == 2 for t in _terms]), \
@@ -87,6 +88,8 @@ class Polynomial(object):
 
         >>> P((1, 0)) + P((2, 1), (2, 0))
         2x + 3
+        >>> P((3, 0), (4, 3)) + 4
+        4x^3 + 7
         """
         return Polynomial(poly(p1).terms + poly(p2).terms)
 
@@ -95,13 +98,16 @@ class Polynomial(object):
 
         >>> P((1, 0)) - P((2, 1), (2, 0))
         -2x - 1
+        >>> P((3, 0), (4, 3)) - 4
+        4x^3 - 1
         """
         return p1 + -p2
 
     def __neg__(p):
         """Implements negation for Polynomial object
-        >>> -P((1, 0))
-        -1
+
+        >>> -P((1, 4))
+        -1x^4
         """
         return p * -1
 
@@ -112,6 +118,8 @@ class Polynomial(object):
 
         >>> P((1, 0)) * -5
         -5
+        >>> P((1, 1), (3, 2)) * P((3, 2), (1, 3)) # (3x^2 + x) * (x^3 + 3x^2)
+        3x^5 + 10x^4 + 3x^3
         """
         multiply = lambda p1, p2: (p1[0] * p2[0], p1[1] + p2[1])
         return Polynomial(sum([[multiply(p1, p2) for p1 in poly(p1).terms]
@@ -130,7 +138,8 @@ class Polynomial(object):
     def __getitem__(self, i):
         """Implements indexing for Polynomial objects
 
-        >>> P((1, 0), (5, 3), (3, 2))[0]
+        >>> p = P((1, 0), (5, 3), (3, 2))
+        >>> p[0]  # first term, after sorted by degree
         5x^3
         """
         self.sort()
@@ -170,6 +179,7 @@ class Polynomial(object):
             else:
                 string += ' + %s' % t
         return string
+
 
 class Fraction(object):
     """Representation of a Fraction, accepts Fractions and Polynomials as
