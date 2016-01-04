@@ -1,4 +1,4 @@
-from util import Fraction, Polynomial as P, reduce, mul, add, prod
+from .util import Fraction, Polynomial as P, reduce, mul, add, prod
 
 
 def interpolate(*points):
