@@ -1,31 +1,49 @@
-import numbers as numbersModule
+import numbers
+from operator import mul, add
+from functools import reduce
 
-def isnumber(arg):
-    return isinstance(arg, numbersModule.Number)
+# multiplicative compliment to sum
+prod = lambda l: reduce(mul, l)
 
-def isFraction(arg):
-    return isinstance(arg, Fraction)
+# if a fraction or number
+isNumeric = lambda n: isinstance(n, (Fraction, numbers.Number))
 
-def isPolynomial(arg):
-    return isinstance(arg, Polynomial)
+# coerce to a polynomial
+poly = lambda p: P.make_constant(p) if isNumeric(p) else p
+
+# converts to int if float value is equal to int value
+possibleInt = lambda n: int(n) if int(n) == float(n) else n
 
 class Polynomial(object):
 
-    def __init__(self, terms, var = "x"):
-        assert isinstance(terms, list), "Terms must be a list of tuples"
-        assert isinstance(var, str), "The Variable must be a string representing the Variable"
-        self.termsList = self.unsimplified_terms = terms
+    def __init__(self, terms=[], *_terms, var = "x"):
+        """
+        Polynomial can be called with a single list of multiple points, or
+        with multiple arguments, where each argument is a point.
+
+        >>> Polynomial([])
+        Traceback (most recent call last):
+        ...
+        AssertionError: No terms provided.
+        >>> Polynomial((3, 2), (2, 0))
+        3x^2 + 2
+        >>> Polynomial([(3, 2), (2, 0)])
+        3x^2 + 2
+        """
+        assert len(terms) or len(_terms), 'No terms provided.'
+        assert all([isinstance(t, tuple) and len(t) == 2 for t in _terms]), \
+            "Terms must be tuples of the form (coefficient, exponent)."
+        assert isinstance(var, str), "Variable must be a string."
+        __terms = terms if hasattr(terms[0], '__iter__') else (terms,) + _terms
+        self.termsList = self.unsimplified_terms = __terms
         self.combine_terms()
-        self.simplify()
         self.sort()
         self.var = var
 
-    #Done
     @property
     def terms(self):
         return self.termsList
 
-    #Done
     def copy(self):
         return Polynomial(self.terms,self.var)
 
@@ -35,150 +53,154 @@ class Polynomial(object):
 
     @staticmethod
     def make_constant(c):
-        return Polynomial([(c, 0)])
-    #Done
+        """creates a Polynomial representation of a constant"""
+        assert isNumeric(c), 'Non-numerics cannot be coerced to a constant.'
+        return Polynomial((c, 0))
+
+    def is_constant(self):
+        """tests if polynomial is a constant"""
+        return len(self.terms) == 1 and self.terms[0][1] == 0
+
     def combine_terms(self):
+        """Combine terms, by summing all coefficients of the same degree
+
+        >>> P((3, 3), (3, 5), (2, 5)).combine_terms().termsList
+        [(3, 3), (5, 5)]
+        """
         combined = {}
-        for term in self.terms:
-            exp = term[1]
-            coefficient = term[0]
-            if combined.has_key(exp):
-                combined[exp] = combined[exp] +  coefficient
-            else:
-                combined[exp] = coefficient
-        self.termsList = [(v, k) for k, v in combined.items()] # FLips Key Value Pairs
+        for coeff, exp in self.terms:
+            combined.setdefault(exp, []).append(coeff)
+        self.termsList = [(sum(v), k) for k, v in combined.items()]
         return self
 
-    def simplify(self):
-        simplified = {}
-        for term in self.terms:
-            exp = term[1]
-            coefficient = term[0]
-            if coefficient == 0:
-                continue
-            else:
-                simplified[exp] = coefficient
-        self.termsList = [(v, k) for k, v in simplified.items()] # FLips Key Value Pairs
+    def clean(self):
+        """Removes all terms with coefficient 0
+
+        >>> P((3, 5), (0, 5), (3, 1)).clean().termsList
+        [(3, 5), (3, 1)]
+        """
+        self.termsList = list(filter(lambda term: term[0], self.termsList))
         return self
 
-    #Done
-    @staticmethod
-    def add(p1, p2):
-        p1terms = [(p1, 0)] if Polynomial.Number_or_Polynomial(p1) else p1.terms
-        p2terms = [(p2, 0)] if Polynomial.Number_or_Polynomial(p2) else p2.terms
-        return Polynomial(p1terms + p2terms)
+    def __add__(p1, p2):
+        """Implements addition for Polynomial object
 
-    #Done
-    @staticmethod
-    def subtract(p1,p2):
-        # ERROR HANDLING DONE IN ADD
-        return Polynomial.add(p1, Polynomial.negate(p2))
+        >>> P((1, 0)) + P((2, 1), (2, 0))
+        2x + 3
+        """
+        return Polynomial(poly(p1).terms + poly(p2).terms)
 
-    #Done
-    @staticmethod
-    def negate(p1):
-        p1terms = [(p1, 0)] if Polynomial.Number_or_Polynomial(p1) else p1.terms
+    def __sub__(p1, p2):
+        """Implements subtraction for Polynomial object
 
-        newTerms = []
-        for term in p1terms:
-            c, exp = term
-            newTerms.append((-c, exp))
-        return Polynomial(newTerms, p1.var)
+        >>> P((1, 0)) - P((2, 1), (2, 0))
+        -2x - 1
+        """
+        return p1 + -p2
 
-    @staticmethod
-    def multiply(p1, p2):
-        p1terms = [(p1, 0)] if Polynomial.Number_or_Polynomial(p1) else p1.terms
-        p2terms = [(p2, 0)] if Polynomial.Number_or_Polynomial(p2) else p2.terms
+    def __neg__(p):
+        """Implements negation for Polynomial object
+        >>> -P((1, 0))
+        -1
+        """
+        return p * -1
 
+    def __mul__(p1, p2):
+        """Implements multiplication for Polynomial object. Note: Multiplication
+        by non-Polynomial objects, like integers or floats, can only be
+        accomplished in one format: Polynomial * non-Polynomial
 
-        multiplied = []
-        def multiplyTerms(point1, point2):
-            c1,exp1 = point1
-            c2,exp2 = point2
-            return (c1*c2, exp1+exp2)
+        >>> P((1, 0)) * -5
+        -5
+        """
+        multiply = lambda p1, p2: (p1[0] * p2[0], p1[1] + p2[1])
+        return Polynomial(sum([[multiply(p1, p2) for p1 in poly(p1).terms]
+            for p2 in poly(p2).terms], []))
 
-        multiplied = []
-        for point1 in p1terms:
-            for point2 in p2terms:
-                multiplied.append(multiplyTerms(point1, point2))
-        # print(multiplied)
-        return Polynomial(multiplied)
+    def __div__(p1, p2):
+        raise NotImplemented()
 
-    @staticmethod
-    def divide(p1, p2):
-        """ p1  divided by p2 -> p1/p2 """
-        if isinstance(p1, Polynomial):
-            p1 = p1.get_terms()
-        if isinstance(p2, Polynomial):
-            p2 = p2.get_terms()
+    def __float__(p1):
+        if Polynomial.is_constant(p1):
+            return float(p1.terms[0][0])
+        raise TypeError('Non-constant polynomial cannot be coerced to float.')
 
-        return Polynomial.multiply(p1, inverse_p2)
+    def __repr__(self):
+        return str(self)
 
-    #Done
-    @staticmethod
-    def poly_print(polynomial):
-        output = ""
-        for term in polynomial:
-            output += str(term[0]) + self.var + "^" + str(term[1]) + " + "
-        output = output[: len(output) - 3]
-        print(output)
-
-    def Number_or_Polynomial(p1):
-        """Return 1 if Number 0 if Polynomial, else Error"""
-        errMsg = "Args must be a list of  terms or instance of Polynomail!"
-        assert isnumber(p1) or isFraction(p1) or isPolynomial(p1), errMsg
-        return 1 if (isnumber(p1) or isFraction(p1)) else 0
-
-    #Done
     def __str__(self):
-        output = ""
-        for term in self.terms:
-            c, exp = term
-            if c == 0:
-                continue
-            elif exp == 0:
-                output += str(c) + " + "
-            elif c == 1:
-                output +=  self.var + "^" + str(term[1]) + " + "
+        """Stringifies polynomials
+
+        >>> P((3, 2))
+        3x^2
+        >>> P((3, 1)) # no caret (^), if exponent is 1
+        3x
+        >>> P((3, 0)) # no variable if exponent is 0
+        3
+        >>> P((1, 1)) # no coefficient if coefficient is 1
+        x
+        >>> P((0, 2), (1, 1)) # no terms with coefficient 0
+        x
+        """
+        def stringify(term):
+            coefficient, exponent = term
+            exp = {
+                0: '',
+                1: self.var
+            }.get(exponent, '%s^%d' % (self.var, exponent))
+            cof = '' if coefficient == 1 else str(possibleInt(coefficient))
+            return '%s%s' % (cof, exp)
+        string = ''
+        for t in map(stringify, filter(lambda t: t[0], self.terms)):
+            if not string:
+                string += t
+            elif t[0] == '-':
+                string += ' - %s' % t[1:]
             else:
-                output += str(term[0]) + self.var + "^" + str(term[1]) + " + "
-        output = output[: len(output) - 3]
-        return output
+                string += ' + %s' % t
+        return string
 
 class Fraction(object):
-    """Utilizes Polynomial Class"""
+    """Representation of a Fraction, accepts Fractions and Polynomials as
+    numerators and denominators, in addition to regular numerical expressions
+    in Python.
+    """
 
     def __init__(self, num, den):
         assert den != 0
-        assert isnumber(num) or isPolynomial(num) or isFraction(num)
-        assert isnumber(den) or isPolynomial(den) or isFraction(den)
+        assert isNumeric(num) or isinstance(num, Polynomial)
+        assert isNumeric(den) or isinstance(den, Polynomial)
 #CHECK FOR SIMPLIFIYING FRACTIONS
-        self.num = Polynomial.make_constant(num) if isnumber(num) else num
-        self.den = Polynomial.make_constant(den) if isnumber(den) else den
+        self.num = poly(num)
+        self.den = poly(den)
         self.reduceConstants()
+        self.simplify()
 
     def copy(self):
         return Fraction(self.num, self.den)
 
-    @staticmethod
-    def add(f1, f2):
-        assert isinstance(f1, Fraction) and isinstance(f2, Fraction)
-        common_den = Polynomial.multiply(f1.den, f2.den)
-        f1num = Polynomial.multiply(f1.num, f2.den)
-        f2num = Polynomial.multiply(f2.num, f1.den)
-        return Fraction(Polynomial.add(f1num, f2num), common_den)
+    def __add__(f1, f2):
+        assert isNumeric(f1) and isNumeric(f2)
+        if not isinstance(f2, Fraction):
+            return Fraction(f1.num * f2, f1.den)
+        return Fraction(f1.num * f2.den + f2.num * f1.den, f1.den * f2.den)
 
-    @staticmethod
-    def multiply(f1,f2):
-        assert isinstance(f1, Fraction) and isinstance(f2, Fraction)
-        return Fraction(Polynomial.multiply(f1.num, f2.num), Polynomial.multiply(f1.den, f2.den))
+    def __mul__(f1, f2):
+        assert isNumeric(f1) and isNumeric(f2)
+        if not isinstance(f2, Fraction):
+            return Fraction(f1.num * f2, f1.den)
+        return Fraction(f1.num * f2.num, f1.den * f2.den)
 
-    @staticmethod
-    def divide(f1,f2):
-        assert isinstance(f1, Fraction) and isinstance(f2, Fraction)
-        return Fraction.multiply(f1, f2.copy().invert())
+    def __div__(f1,f2):
+        assert isNumeric(f1) and isNumeric(f2)
+        return f1 * f2.copy().invert()
+
+    def reciprocal(self):
+        """Returns a new Fraction, reciprocal of the original"""
+        return Fraction(self.den, self.num)
 
     def invert(self):
+        """Inverts existing Fraction, in-place"""
         self.num, self.den = self.den, self.num
         return self
 
@@ -196,47 +218,38 @@ class Fraction(object):
         self.den = Polynomial([(x[0]*1.0/gcd , x[1]) for x in self.den.terms])
         return self
 
+    def simplify(self):
+        """Takes several steps to simplify fractions:
+        1. Rids of negative denominators
+        2. Divides by gcd of terms in numerator and terms in denominator
+        """
+        if self.den.is_constant() and float(self.den) == -1:
+            self.den, self.num = poly(1), -self.num
+
     def __repr__(self):
         return str(self)
 
     def __str__(self):
-        if str(self.den) == "1.0" or str(self.den) == "1":
+        """String representation of a Fraction"""
+        if poly(self.den).is_constant() and float(self.den) == 1:
             return str(self.num)
-        return "(" + str(self.num) + ")/(" + str(self.den) + ")"
+        return "(%s)/(%s)" % (str(self.num), str(self.den))
 
 
-def L_Interpolate(*points):
-    """takes in a list of tuples of x,y cordinates
+def interpolate(*points):
+    """Takes in a list of tuples of x,y cordinates.
 
-    >>> L_Interpolate((-1, 1), (0, 0), (1, 1))
-    x^2
-    >>> interpolate = lambda y, d: L_Interpolate(*[
-    ... (x, y(x)) for x in range(d+1)])
-    >>> y2 = lambda x: x**5 + 3*x**3 + x
-    >>> interpolate(y2, 5)
-    x^5 + 3.0x^3 + x^1
-    >>> y3 = lambda x: 7*x**4 + 5*x**3 + 9*x**2 + 3
-    >>> interpolate(y3, 4)
-    7.0x^4 + 5.0x^3 + 9.0x^2 + 3.0
+    >>> ipt = lambda y, d: interpolate(*[(x, y(x)) for x in range(d+1)])
+    >>> ipt(lambda x: x**5 + 3*x**3 + x, 5)
+    x^5 + 3x^3 + x
+    >>> ipt(lambda x: 7*x**4 + 5*x**3 + 9*x**2 + 3, 4)
+    7x^4 + 5x^3 + 9x^2 + 3
     """
-    poly = Polynomial
-    poly_builder = []
+    points = set(points)
+    return reduce(add, [
+        Fraction(
+            prod(P((1, 1), (-x2, 0)) for x2, y2 in points if (x,y) != (x2,y2)), prod(P((x,0), (-x2, 0)) for x2, y2 in points if (x,y) != (x2,y2))
+        ) * y for x, y in points])
 
-    final_polynomial = Fraction(Polynomial([(0, 0)]),1)
-    for point in points:
-        x_point1, y_point1 = point
-        num = poly.make_constant(1)
-        den = poly.make_constant(1)
-
-        for point2 in points:
-            if point == point2:
-                continue
-            x_point2 = point2[0]
-            num = poly.multiply(num, Polynomial([(1, 1), (-x_point2,0)]))
-            den = poly.multiply(den, Polynomial([(x_point1, 0), (-x_point2,0)]))
-            numden = Fraction.multiply(Fraction(num, 1), Fraction(1,den))
-        poly_builder.append(Fraction.multiply(numden, Fraction(y_point1,1)))
-
-    for polynomial in poly_builder:
-        final_polynomial = Fraction.add(final_polynomial, polynomial)
-    return final_polynomial
+# abbreviations
+P = Polynomial
