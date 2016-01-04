@@ -1,7 +1,7 @@
 import utils
 import math
 
-# @authors: Nathan Pucheril, Alvin Wan
+# @author: Nathan Pucheril
 
 
 class ExpressionBuilder(object):
@@ -222,6 +222,68 @@ class Fraction(Expression):
         if str(self.den) == "1.0" or str(self.den) == "1":
             return str(self.num)
         return "(" + str(self.num) + ")/(" + str(self.den) + ")"
+
+class Polynomial(Expression):
+
+    def __init__(self, terms, var = "x"):
+        assert isinstance(terms, list), "Terms must be a list of tuples"
+        assert isinstance(var, str), "The Variable must be a string representing the Variable"
+        for term in terms:
+            assert isinstance(term, PowerTerm), "Every Term must be a PowerTerm"
+            assert isinstance(term.exp, ConstantTerm), "Every terms exponent must be a ConstantTerm"
+        super(Polynomial, self).__init__(var)
+        self.termsList = self.unsimplified_terms = terms
+        self._clean()
+
+
+    def _clean(self):
+        self._combine_terms()._simplify()._sort()
+        return self
+
+    def sort(self):
+        self.termsList = sorted(self.terms, key = lambda x: x[1],reverse = True)
+        return self
+
+    def _combine_terms(self):
+        combined = {}
+        for term in self.terms:
+            exp = term[1]
+            coefficient = term[0]
+            if combined.has_key(exp):
+                combined[exp] = combined[exp] +  coefficient
+            else:
+                combined[exp] = coefficient
+        self.termsList = [(v, k) for k, v in combined.items()] # FLips Key Value Pairs
+        return self
+
+    def _simplify(self):
+        simplified = {}
+        for term in self.terms:
+            exp = term[1]
+            coefficient = term[0]
+            if coefficient == 0:
+                continue
+            else:
+                simplified[exp] = coefficient
+        self.termsList = [(v, k) for k, v in simplified.items()] # FLips Key Value Pairs
+        return self
+
+
+    #Done
+    def __str__(self):
+        output = ""
+        for term in self.terms:
+            c, exp = term
+            if c == 0:
+                continue
+            elif exp == 0:
+                output += str(c) + " + "
+            elif c == 1:
+                output +=  self.var + "^" + str(term[1]) + " + "
+            else:
+                output += str(term[0]) + self.var + "^" + str(term[1]) + " + "
+        output = output[: len(output) - 3]
+        return output
 
 ##############################
 
