@@ -1,3 +1,11 @@
+# Automatic Jigsaw Puzzle Solver
+
+by Alvin Wan and Nathan Pucheril
+
+## Usage
+
+TODO
+
 ## Installation
 
 Check that Python3 is installed using `source check.sh`. Then, run the installation using `source install.sh`.
@@ -9,3 +17,9 @@ In case the installation script fails, you may execute the contents of the bash 
 1. Install all requirements `pip install -r requirements.txt`.
 
 > To activate the virtual environment for the future, use `source activate.sh`.
+
+## About
+
+### Apictorial Solver
+
+### Pictorial Solver
