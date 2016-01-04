@@ -68,6 +68,10 @@ class Polynomial(object):
     def terms(self):
         return self.termsList
 
+    @property
+    def degree(self):
+        return max(map(lambda x: x[1], self.terms))
+
     def copy(self):
         return Polynomial(self.terms,self.var)
 
@@ -109,9 +113,9 @@ class Polynomial(object):
     def __add__(p1, p2):
         """Implements addition for Polynomial object
 
-        >>> P((1, 0)) + P((2, 1), (2, 0))
+        >>> P('1') + P('2x + 2')
         2x + 3
-        >>> P((3, 0), (4, 3)) + 4
+        >>> P('3 + 4x^3') + 4
         4x^3 + 7
         """
         return Polynomial(poly(p1).terms + poly(p2).terms)
