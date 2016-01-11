@@ -25,7 +25,6 @@ This library supports the following methods.
 
 - Lagrange Interpolation: `PyExpressions.lagrangeinterpolation.interpolate`
 - Lagrange Interpolation in a Galois Field: TODO
-- Polynomial GCD: `PyExpressions.PolynomialGCD.polynomialGCD`
 
 ## Polynomial
 
